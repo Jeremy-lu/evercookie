@@ -3,11 +3,14 @@ var evercookie = {};
 evercookie.get = function(key, callback) {
     var resultArr = [];
     ecEtag(key, null, function(etagVal) {
-        resultArr.push('cookie ---> ' + ecCookie(key));
-        resultArr.push('session ---> ' + ecSessionStorage(key));
-        resultArr.push('local storage ---> ' + ecLocalStorage(key));
-        resultArr.push('etag ---> ' + etagVal);
-        callback(resultArr);
+        ecLso(key, null, function(lsoVal) {
+            resultArr.push('cookie ---> ' + ecCookie(key));
+            resultArr.push('session ---> ' + ecSessionStorage(key));
+            resultArr.push('local storage ---> ' + ecLocalStorage(key));
+            resultArr.push('etag ---> ' + etagVal);
+            resultArr.push('flash(lso) ---> ' + lsoVal);
+            callback(resultArr);
+        });
     });
 };
 
@@ -16,6 +19,7 @@ evercookie.set = function(key, val) {
     ecSessionStorage(key, val);
     ecLocalStorage(key, val);
     ecEtag(key, val);
+    ecLso(key, val);
 };
 
 function ecCookie(key, val) {
@@ -66,6 +70,76 @@ function ecEtag(key, value, callback) {
                 if (callback) callback(data);
             }
         });
+    }
+}
+
+var _global_lso;
+var reqCount = 0;
+// Comunicate with local shared object(lso)
+function _evercookie_flash_var(cookie) {
+    reqCount = reqCount - 1;
+    _global_lso = cookie;
+
+    // remove the flash object now
+    var swf = document.getElementById('myswf');
+    if (swf && swf.parentNode) {
+        swf.parentNode.removeChild(swf);
+    }
+}
+
+function ecLso(key, value, callback) {
+    var isGet = (value === undefined) || (value === null);
+
+    var div = document.getElementById('swfcontainer'),
+        flashvars = {},
+        params = {},
+        attributes = {};
+    if (div === null || div === undefined || !div.length) {
+        div = document.createElement('div');
+        div.setAttribute('id', 'swfcontainer');
+        document.body.appendChild(div);
+    }
+
+    if (!isGet) {
+        flashvars.everdata = key + '=' + value;
+    }
+    params.swliveconnect = 'true';
+    attributes.id = 'myswf';
+    attributes.name = 'myswf';
+
+    function reqSwf() {
+        reqCount = reqCount + 1;
+        window.swfobject.embedSWF('/assets/evercookie.swf', 'swfcontainer', '1', '1', '9.0.0', false, flashvars, params, attributes);
+    }
+
+    reqSwf();
+
+    // window.swfobject.embedSWF('http://samy.pl/evercookie/evercookie.swf', 'swfcontainer', '1', '1', '9.0.0', false, flashvars, params, attributes);
+
+    if (isGet) {
+        var tryCount = 0;
+        var maxTryCount = 3;
+
+        var getData = function() {
+            if(reqCount > 0) {
+                setTimeout(function() {
+                    getData();
+                }, 50);
+            } else if(!_global_lso) {
+                if(tryCount < maxTryCount) {
+                    tryCount = tryCount + 1;
+                    reqSwf();
+                    getData();
+                } else {
+                    callback(_global_lso);
+                }
+            } else {
+                callback(getValueFromStr(_global_lso, key));
+                _global_lso = null;
+            }
+        };
+
+        getData();
     }
 }
 
