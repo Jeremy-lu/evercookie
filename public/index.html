@@ -40,8 +40,8 @@
     }
 
     function get() {
-        evercookie.get('id', function(val) {
-            document.getElementById('result').innerHTML = val;
+        evercookie.get('id', function(resultArr) {
+            document.getElementById('result').innerHTML = '<br><br>' + resultArr.join('<br><br>');
         });
     }
 </script>
