@@ -119,12 +119,19 @@ function ecLso(key, value, callback) {
     if (isGet) {
         var tryCount = 0;
         var maxTryCount = 3;
+        var waitTime = 0;
+        var maxWaitTime = 1000;
 
         var getData = function() {
             if(reqCount > 0) {
-                setTimeout(function() {
-                    getData();
-                }, 50);
+                waitTime += 50;
+                if(waitTime < maxWaitTime) {
+                    setTimeout(function() {
+                        getData();
+                    }, 50);
+                } else {
+                    callback(_global_lso);
+                }
             } else if(!_global_lso) {
                 if(tryCount < maxTryCount) {
                     tryCount = tryCount + 1;
