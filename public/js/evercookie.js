@@ -2,14 +2,16 @@ var evercookie = {};
 
 evercookie.get = function(key, callback) {
     var resultArr = [];
-    resultArr.push('cookie  --->   ' + ecCookie(key));
-    resultArr.push('session --->   ' + ecSessionStorage(key));
+    resultArr.push('cookie ---> ' + ecCookie(key));
+    resultArr.push('session ---> ' + ecSessionStorage(key));
+    resultArr.push('local storage ---> ' + ecLocalStorage(key));
     callback(resultArr);
 };
 
 evercookie.set = function(key, val) {
     ecCookie(key, val);
     ecSessionStorage(key, val);
+    ecLocalStorage(key, val);
 };
 
 function ecCookie(key, val) {
@@ -31,6 +33,17 @@ function ecSessionStorage(key, value) {
         return window.sessionStorage.getItem(key);
     }
 }
+
+function ecLocalStorage(key, value) {
+    if (!window.localStorage) return;
+
+    if (value) {
+        window.localStorage.setItem(key, value);
+    } else {
+        return window.localStorage.getItem(key);
+    }
+}
+
 
 function getValueFromStr(str, key, splitChar) {
     splitChar = splitChar || ';';
