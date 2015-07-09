@@ -3,11 +3,13 @@ var evercookie = {};
 evercookie.get = function(key, callback) {
     var resultArr = [];
     resultArr.push('cookie  --->   ' + ecCookie(key));
+    resultArr.push('session --->   ' + ecSessionStorage(key));
     callback(resultArr);
 };
 
 evercookie.set = function(key, val) {
     ecCookie(key, val);
+    ecSessionStorage(key, val);
 };
 
 function ecCookie(key, val) {
@@ -17,6 +19,16 @@ function ecCookie(key, val) {
         document.cookie = key + '=' + val + '; expires=' + d.toUTCString();
     } else {
         return getValueFromStr(document.cookie, key);
+    }
+}
+
+function ecSessionStorage(key, value) {
+    if (!window.sessionStorage) return;
+
+    if (value) {
+        window.sessionStorage.setItem(key, value);
+    } else {
+        return window.sessionStorage.getItem(key);
     }
 }
 
