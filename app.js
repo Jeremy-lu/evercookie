@@ -13,6 +13,21 @@ app.use(function(req, res, next) {
         case '/favicon.ico':
             res.writeHead(200, {'Content-Type': 'image/x-icon'});
             break;
+        case '/evercookie/etag.html':
+            var val = req.cookies[req.query.name];
+            console.log();
+            console.log('***********  cookie: ', val);
+            console.log('****  If-None-Match: ', req.get('If-None-Match'));
+            console.log();
+            if (!val) val = req.get('If-None-Match');
+
+            if (val) {
+                res.set('Etag', val);
+                res.send(val);
+            } else {
+                res.sendStatus(304);
+            }
+            break;
         default:
             next();
     }
