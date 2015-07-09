@@ -4,32 +4,33 @@
 <head>
     <title>Evercookie</title>
     <style>
-        .main {
+        #main {
             width: 50%;
             height: 600px;
             margin: 2% 25%;
             background: beige;
         }
-        .operate-panel {
+        #operate-panel {
             text-align: center;
         }
-        .operate-panel button {
+        #operate-panel button {
             height: 30px;
             border-radius: 5px;
             margin: 10px;
+        }
+        #result {
+            margin-left: 50px;
         }
     </style>
 </head>
 
 <body>
-    <div class="main">
-        <div class="operate-panel">
+    <div id="main">
+        <div id="operate-panel">
             <button onclick="get()">get from evercookie</button>
             <button onclick="set()">set to evercookie</button>
         </div>
-        <div style='margin-left: 50px;'>
-            <div id='result'></div>
-        </div>
+        <div id='result'></div>
     </div>
 </body>
 

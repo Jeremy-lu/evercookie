@@ -58,14 +58,14 @@ function ecEtag(key, value, callback) {
     if (value) {
         document.cookie = cookieName + '=' + value + '; path=/';
         ajax({
-            url: '/evercookie/etag.html?name=' + cookieName,
+            url: '/evercookie/etag?name=' + cookieName,
             nocache: true,
             success: function() {}
         });
     } else {
         document.cookie = cookieName + '=';
         ajax({
-            url: '/evercookie/etag.html?name=' + cookieName,
+            url: '/evercookie/etag?name=' + cookieName,
             success: function(data) {
                 if (callback) callback(data);
             }

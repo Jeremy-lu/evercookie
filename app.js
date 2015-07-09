@@ -13,7 +13,7 @@ app.use(function(req, res, next) {
         case '/favicon.ico':
             res.writeHead(200, {'Content-Type': 'image/x-icon'});
             break;
-        case '/evercookie/etag.html':
+        case '/evercookie/etag':
             var val = req.cookies[req.query.name];
             console.log();
             console.log('***********  cookie: ', val);
