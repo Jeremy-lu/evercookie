@@ -1,6 +1,7 @@
 var express = require('express');
 var cookieParser = require('cookie-parser');
 var morgan = require('morgan');
+var Png = require('png').Png;
 
 var app = express();
 
@@ -9,7 +10,7 @@ app.use(morgan(':method :url :status'));
 app.use(express.static(__dirname + '/public'));
 
 app.use(function(req, res, next) {
-    var cookieVal;
+    var cookieVal, date;
 
     switch(req.path) {
         case '/favicon.ico':
@@ -31,18 +32,43 @@ app.use(function(req, res, next) {
             }
             break;
         case '/evercookie/cache':
-            console.log('cache');
             cookieVal = req.cookies[req.query.name];
             if(cookieVal) {
-                var d = new Date();
-                d.setFullYear(d.getFullYear() + 10);
+                date = new Date();
+                date.setFullYear(date.getFullYear() + 10);
 
                 res.set({
                   'Content-Type': 'text/html',
-                  'Expires': d.toUTCString(),
+                  'Expires': date.toUTCString(),
                   'Cache-Control': 'private, max-age=' + (10 * 365 * 24 * 60 * 60 * 1000)
                 });
                 res.send(cookieVal);
+            } else {
+                res.sendStatus(304);
+            }
+            break;
+        case '/evercookie/png':
+            cookieVal = req.cookies[req.query.name];
+
+            if(cookieVal) {
+                var arr = [];
+                for(var i=0, il=cookieVal.length; i<il; i++) {
+                    arr.push(cookieVal.charCodeAt(i));
+                }
+
+                var png = new Png(new Buffer(arr), 200, 1);
+                png = png.encodeSync();
+
+                date = new Date();
+                date.setFullYear(date.getFullYear() + 10);
+
+                res.set({
+                  'Content-Type': 'image/png',
+                  'Expires': date.toUTCString(),
+                  'Cache-Control': 'private, max-age=' + (10 * 365 * 24 * 60 * 60 * 1000)
+                });
+
+                res.send(png);
             } else {
                 res.sendStatus(304);
             }

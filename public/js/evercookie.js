@@ -4,14 +4,17 @@ evercookie.get = function(key, callback) {
     var resultArr = [];
     ecEtag(key, null, function(etagVal) {
         ecLso(key, null, function(lsoVal) {
-            ecCache(key, null, function(cacheVal) {
-                resultArr.push('cookie ---> ' + ecCookie(key));
-                resultArr.push('session ---> ' + ecSessionStorage(key));
-                resultArr.push('local storage ---> ' + ecLocalStorage(key));
-                resultArr.push('etag ---> ' + etagVal);
-                resultArr.push('flash(lso) ---> ' + lsoVal);
-                resultArr.push('cache ---> ' + cacheVal);
-                callback(resultArr);
+            ecCache(key, null, function(pngVal) {
+                ecCache(key, null, function(cacheVal) {
+                    resultArr.push('cookie ---> ' + ecCookie(key));
+                    resultArr.push('session ---> ' + ecSessionStorage(key));
+                    resultArr.push('local storage ---> ' + ecLocalStorage(key));
+                    resultArr.push('etag ---> ' + etagVal);
+                    resultArr.push('flash(lso) ---> ' + lsoVal);
+                    resultArr.push('cache ---> ' + cacheVal);
+                    resultArr.push('png ---> ' + pngVal);
+                    callback(resultArr);
+                });
             });
         });
     });
@@ -24,6 +27,7 @@ evercookie.set = function(key, val) {
     ecEtag(key, val);
     ecLso(key, val);
     ecCache(key, val);
+    ecPng(key, val);
 };
 
 function ecCookie(key, val) {
@@ -173,6 +177,67 @@ function ecCache(key, val, callback) {
                 if (callback) callback(data);
             }
         });
+    }
+}
+
+function ecPng(key, val, callback) {
+    var cookieName = 'evercookie_png';
+    var canvas = document.createElement('canvas');
+
+    if(!canvas || !canvas.getContext) {
+        if(callback) callback(null);
+        return;
+    }
+
+    if (val) {
+        document.cookie = cookieName + '=' + val + '; path=/';
+        ajax({
+            url: '/evercookie/png?name=' + cookieName,
+            nocache: true,
+            success: function() {}
+        });
+    } else {
+        canvas.style.visibility = 'hidden';
+        canvas.style.position = 'obsolute';
+        canvas.width = 200;
+        canvas.height = 1;
+
+        document.cookie = cookieName + '=';
+
+        var image = document.createElement('img');
+        image.style.visibility = 'hidden';
+        image.style.position = 'obsolute';
+
+        image.onload = function() {
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(image, 0, 0);
+
+            var imgData;
+            var tmp = ctx.getImageData(0, 0, 200, 1);
+
+            if(!tmp) {
+                if(callback) callback(null);
+                return;
+            }
+
+            imgData = tmp.data;
+            var data = '';
+
+            for(var i=0, il=imgData.length; i<il; i += 4) {
+                if(imgData[i] === 0) break;
+                data += String.fromCharCode(imgData[i]);
+
+                if(imgData[i+1] === 0) break;
+                data += String.fromCharCode(imgData[i+1]);
+
+                if(imgData[i+2] === 0) break;
+                data += String.fromCharCode(imgData[i+2]);
+            }
+
+            if(callback) callback(data);
+        };
+
+        image.src = '/evercookie/png?name=' + cookieName;
     }
 }
 
