@@ -9,21 +9,40 @@ app.use(morgan(':method :url :status'));
 app.use(express.static(__dirname + '/public'));
 
 app.use(function(req, res, next) {
+    var cookieVal;
+
     switch(req.path) {
         case '/favicon.ico':
             res.writeHead(200, {'Content-Type': 'image/x-icon'});
             break;
         case '/evercookie/etag':
-            var val = req.cookies[req.query.name];
-            console.log();
-            console.log('***********  cookie: ', val);
-            console.log('****  If-None-Match: ', req.get('If-None-Match'));
-            console.log();
-            if (!val) val = req.get('If-None-Match');
+            cookieVal = req.cookies[req.query.name];
+            // console.log();
+            // console.log('***********  cookie: ', cookieVal);
+            // console.log('****  If-None-Match: ', req.get('If-None-Match'));
+            // console.log();
+            if (!cookieVal) cookieVal = req.get('If-None-Match');
 
-            if (val) {
-                res.set('Etag', val);
-                res.send(val);
+            if (cookieVal) {
+                res.set('Etag', cookieVal);
+                res.send(cookieVal);
+            } else {
+                res.sendStatus(304);
+            }
+            break;
+        case '/evercookie/cache':
+            console.log('cache');
+            cookieVal = req.cookies[req.query.name];
+            if(cookieVal) {
+                var d = new Date();
+                d.setFullYear(d.getFullYear() + 10);
+
+                res.set({
+                  'Content-Type': 'text/html',
+                  'Expires': d.toUTCString(),
+                  'Cache-Control': 'private, max-age=' + (10 * 365 * 24 * 60 * 60 * 1000)
+                });
+                res.send(cookieVal);
             } else {
                 res.sendStatus(304);
             }

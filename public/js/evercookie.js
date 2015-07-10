@@ -4,12 +4,15 @@ evercookie.get = function(key, callback) {
     var resultArr = [];
     ecEtag(key, null, function(etagVal) {
         ecLso(key, null, function(lsoVal) {
-            resultArr.push('cookie ---> ' + ecCookie(key));
-            resultArr.push('session ---> ' + ecSessionStorage(key));
-            resultArr.push('local storage ---> ' + ecLocalStorage(key));
-            resultArr.push('etag ---> ' + etagVal);
-            resultArr.push('flash(lso) ---> ' + lsoVal);
-            callback(resultArr);
+            ecCache(key, null, function(cacheVal) {
+                resultArr.push('cookie ---> ' + ecCookie(key));
+                resultArr.push('session ---> ' + ecSessionStorage(key));
+                resultArr.push('local storage ---> ' + ecLocalStorage(key));
+                resultArr.push('etag ---> ' + etagVal);
+                resultArr.push('flash(lso) ---> ' + lsoVal);
+                resultArr.push('cache ---> ' + cacheVal);
+                callback(resultArr);
+            });
         });
     });
 };
@@ -20,6 +23,7 @@ evercookie.set = function(key, val) {
     ecLocalStorage(key, val);
     ecEtag(key, val);
     ecLso(key, val);
+    ecCache(key, val);
 };
 
 function ecCookie(key, val) {
@@ -150,7 +154,27 @@ function ecLso(key, value, callback) {
     }
 }
 
+function ecCache(key, value, callback) {
+    var cookieName = 'evercookie_cache';
 
+    if (value) {
+        document.cookie = cookieName + '=' + value + '; path=/';
+        ajax({
+            url: '/evercookie/cache?name=' + cookieName,
+            nocache: true,
+            success: function() {}
+        });
+    } else {
+        document.cookie = cookieName + '=';
+        ajax({
+            url: '/evercookie/cache?name=' + cookieName,
+            // nocache: true,
+            success: function(data) {
+                if (callback) callback(data);
+            }
+        });
+    }
+}
 
 function ajax(settings) {
     var headers, name, transports, transport, i, length;
@@ -161,8 +185,12 @@ function ajax(settings) {
     };
 
     if(settings.nocache) {
-        // Force IE to ignore cache
-        if(isIE()) headers['If-Modified-Since'] = new Date(0);
+        // Force ignore cache
+        if(isIE()) {
+            headers['If-Modified-Since'] = new Date(0);
+        } else {
+            headers['Cache-Control'] = 'no-cache';
+        }
     }
 
     transports = [
