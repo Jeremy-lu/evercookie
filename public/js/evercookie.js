@@ -27,7 +27,7 @@ evercookie.set = function(key, val) {
 };
 
 function ecCookie(key, val) {
-    if (val) {
+    if ((val !== undefined) && val !== null) {
         var d = new Date();
         d.setFullYear(d.getFullYear() + 10);
         document.cookie = key + '=' + val + '; expires=' + d.toUTCString();
@@ -36,31 +36,31 @@ function ecCookie(key, val) {
     }
 }
 
-function ecSessionStorage(key, value) {
+function ecSessionStorage(key, val) {
     if (!window.sessionStorage) return;
 
-    if (value) {
-        window.sessionStorage.setItem(key, value);
+    if ((val !== undefined) && val !== null) {
+        window.sessionStorage.setItem(key, val);
     } else {
         return window.sessionStorage.getItem(key);
     }
 }
 
-function ecLocalStorage(key, value) {
+function ecLocalStorage(key, val) {
     if (!window.localStorage) return;
 
-    if (value) {
-        window.localStorage.setItem(key, value);
+    if ((val !== undefined) && val !== null) {
+        window.localStorage.setItem(key, val);
     } else {
         return window.localStorage.getItem(key);
     }
 }
 
-function ecEtag(key, value, callback) {
+function ecEtag(key, val, callback) {
     var cookieName = 'evercookie_etag';
 
-    if (value) {
-        document.cookie = cookieName + '=' + value + '; path=/';
+    if ((val !== undefined) && val !== null) {
+        document.cookie = cookieName + '=' + val + '; path=/';
         ajax({
             url: '/evercookie/etag?name=' + cookieName,
             nocache: true,
@@ -91,8 +91,8 @@ function _evercookie_flash_var(cookie) {
     }
 }
 
-function ecLso(key, value, callback) {
-    var isGet = (value === undefined) || (value === null);
+function ecLso(key, val, callback) {
+    var isGet = (val === undefined) || (val === null);
 
     var div = document.getElementById('swfcontainer'),
         flashvars = {},
@@ -105,7 +105,7 @@ function ecLso(key, value, callback) {
     }
 
     if (!isGet) {
-        flashvars.everdata = key + '=' + value;
+        flashvars.everdata = key + '=' + val;
     }
     params.swliveconnect = 'true';
     attributes.id = 'myswf';
@@ -154,11 +154,11 @@ function ecLso(key, value, callback) {
     }
 }
 
-function ecCache(key, value, callback) {
+function ecCache(key, val, callback) {
     var cookieName = 'evercookie_cache';
 
-    if (value) {
-        document.cookie = cookieName + '=' + value + '; path=/';
+    if (val) {
+        document.cookie = cookieName + '=' + val + '; path=/';
         ajax({
             url: '/evercookie/cache?name=' + cookieName,
             nocache: true,
