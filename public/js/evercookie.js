@@ -6,14 +6,17 @@ evercookie.get = function(key, callback) {
         ecLso(key, null, function(lsoVal) {
             ecCache(key, null, function(pngVal) {
                 ecCache(key, null, function(cacheVal) {
-                    resultArr.push('cookie ---> ' + ecCookie(key));
-                    resultArr.push('session ---> ' + ecSessionStorage(key));
-                    resultArr.push('local storage ---> ' + ecLocalStorage(key));
-                    resultArr.push('etag ---> ' + etagVal);
-                    resultArr.push('flash(lso) ---> ' + lsoVal);
-                    resultArr.push('cache ---> ' + cacheVal);
-                    resultArr.push('png ---> ' + pngVal);
-                    callback(resultArr);
+                    ecCache(key, null, function(dbVal) {
+                        resultArr.push('cookie ---> ' + ecCookie(key));
+                        resultArr.push('session ---> ' + ecSessionStorage(key));
+                        resultArr.push('local storage ---> ' + ecLocalStorage(key));
+                        resultArr.push('etag ---> ' + etagVal);
+                        resultArr.push('flash(lso) ---> ' + lsoVal);
+                        resultArr.push('cache ---> ' + cacheVal);
+                        resultArr.push('png ---> ' + pngVal);
+                        resultArr.push('database ---> ' + dbVal);
+                        callback(resultArr);
+                    });
                 });
             });
         });
@@ -28,6 +31,7 @@ evercookie.set = function(key, val) {
     ecLso(key, val);
     ecCache(key, val);
     ecPng(key, val);
+    ecDb(key, val);
 };
 
 function ecCookie(key, val) {
@@ -238,6 +242,40 @@ function ecPng(key, val, callback) {
         };
 
         image.src = '/evercookie/png?name=' + cookieName;
+    }
+}
+
+function ecDb(key, val, callback) {
+    if(!window.openDatabase) {
+        if(callback) callback(null);
+        return;
+    }
+
+    var db = window.openDatabase('db_bwoslq', '', 'bwoslq', 1024*1024);
+
+    if((val !== undefined) && (val !== null)) {
+        db.transaction(function(tx) {
+            tx.executeSql('CREATE TABLE IF NOT EXISTS bwosq (' +
+                'id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, ' +
+                'name TEXT NOT NULL ,' +
+                'val TEXT NOT NULL ,' +
+                'UNIQUE (name) ,' +
+                ')', [], function(tx, result) {}, function(tx, err) {});
+
+            tx.executeSql('INSERT OR REPLACE INTO bwosq (name, val) VALUES (?, ?)' +
+                [key, val], function(tx, result) {}, function(tx, err) {});
+        });
+    } else {
+        db.transaction(function(tx) {
+            tx.executeSql('select val from bwosq where name = ?',
+                [key], function(tx, result) {
+                    if(result && result.rows.length) {
+                        if(callback) callback(result.rows[0].val);
+                    } else {
+                        if(callback) callback(null);
+                    }
+                }, function(tx, err) {});
+        });
     }
 }
 
