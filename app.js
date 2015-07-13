@@ -7,7 +7,9 @@ var app = express();
 
 app.use(cookieParser());
 app.use(morgan(':method :url :status'));
-app.use(express.static(__dirname + '/public'));
+app.use(express.static(__dirname + '/public', {
+   setHeaders: setHeaders
+}));
 
 app.use(function(req, res, next) {
     var cookieVal, date;
@@ -82,3 +84,8 @@ app.set('port', process.env.PORT || 9334);
 app.listen(app.get('port'), function() {
     console.log('Server listening on port ' + app.get('port'));
 });
+
+function setHeaders(res) {
+    res.set('P3P', ['policyref="/w3c/p3p.xml", CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT", CP="CAO PSA OUR"']);
+    res.set('Access-Control-Allow-Origin', '*');
+}
