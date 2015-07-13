@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Evercookie Inside Iframe</title>
+</head>
+
+<body>
+</body>
+
+<script type="text/javascript">
+    // console.log('onload');
+    var iframe = document.createElement('iframe');
+    iframe.src = 'http://www.evercookie.com/iframe/inner_iframe.html';
+    // iframe.src = 'http://samy.pl/evercookie/';
+    iframe.style.width = '100%';
+    iframe.style.height = '700px';
+    document.body.appendChild(iframe);
+</script>
+
+</html>

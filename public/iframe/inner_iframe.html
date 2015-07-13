@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Evercookie</title>
+    <style>
+        #main {
+            width: 50%;
+            height: 600px;
+            margin: 2% 25%;
+            background: beige;
+        }
+        #operate-panel {
+            text-align: center;
+        }
+        #operate-panel button {
+            height: 30px;
+            border-radius: 5px;
+            margin: 10px;
+        }
+        #result {
+            margin-left: 50px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="main">
+        <div id="operate-panel">
+            <button onclick="get()">get from evercookie</button>
+            <button onclick="set()">set to evercookie</button>
+        </div>
+        <div id='result'></div>
+    </div>
+</body>
+
+<script type='text/javascript' src='/js/swfobject-2.2.min.js'></script>
+<script type='text/javascript' src='/js/evercookie.js'></script>
+<script>
+    function set() {
+        evercookie.set('ikmnju', new Date());
+    }
+
+    function get() {
+        evercookie.get('ikmnju', function(resultArr) {
+            document.getElementById('result').innerHTML = '<br><br>' + resultArr.join('<br><br>');
+        });
+    }
+
+    get();
+</script>
+
+</html>
