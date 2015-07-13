@@ -22,6 +22,7 @@ evercookie.get = function(key, callback) {
                         resultArr.push('cache ---> ' + cacheVal);
                         resultArr.push('png ---> ' + pngVal);
                         resultArr.push('database ---> ' + dbVal);
+                        resultArr.push('user data ---> ' + ecUserData(key));
                         callback(resultArr);
                     });
                 });
@@ -39,6 +40,7 @@ evercookie.set = function(key, val) {
     ecCache(key, val);
     ecPng(key, val);
     ecDb(key, val);
+    ecUserData(key, val);
 };
 
 function ecCookie(key, val) {
@@ -149,7 +151,7 @@ function ecLso(key, val, callback) {
                         getData();
                     }, 50);
                 } else {
-                    callback(_global_lso);
+                    callback(getValueFromStr(_global_lso, key, '&'));
                 }
             } else if(!_global_lso) {
                 if(tryCount < maxTryCount) {
@@ -157,10 +159,10 @@ function ecLso(key, val, callback) {
                     reqSwf();
                     getData();
                 } else {
-                    callback(_global_lso);
+                    callback(getValueFromStr(_global_lso, key, '&'));
                 }
             } else {
-                callback(getValueFromStr(_global_lso, key));
+                callback(getValueFromStr(_global_lso, key, '&'));
                 _global_lso = null;
             }
         };
@@ -209,7 +211,7 @@ function ecPng(key, val, callback) {
         });
     } else {
         canvas.style.visibility = 'hidden';
-        canvas.style.position = 'obsolute';
+        canvas.style.position = 'absolute';
         canvas.width = 200;
         canvas.height = 1;
 
@@ -217,7 +219,7 @@ function ecPng(key, val, callback) {
 
         var image = document.createElement('img');
         image.style.visibility = 'hidden';
-        image.style.position = 'obsolute';
+        image.style.position = 'absolute';
 
         image.onload = function() {
             var ctx = canvas.getContext('2d');
@@ -283,6 +285,39 @@ function ecDb(key, val, callback) {
                     }
                 }, function(tx, err) {});
         });
+    }
+}
+
+// TODO
+// The user data will disappear after the browser be closed.
+// And, the data didn't shared between two tabs;
+function ecUserData(key, val) {
+    try {
+        var el;
+        if(document.getElementById('rfvbgt')) {
+            el = document.getElementById('rfvbgt');
+        } else {
+            el = document.createElement('div');
+            el.id = 'rfvbgt';
+            el.style.display = 'hidden';
+            el.style.position = 'absolute';
+            document.body.appendChild(el);
+        }
+        el.style.behavior = 'url("#default#userData")';
+
+        if((val !== undefined) && (val !== null)) {
+            var d = new Date();
+            d.setFullYear(d.getFullYear() + 10);
+
+            el.expires = d.toUTCString();
+            el.setAttribute(key, val);
+            el.save(key);
+        } else {
+            el.load(key);
+            return el.getAttribute(key);
+        }
+    } catch (e) {
+        return null;
     }
 }
 

@@ -38,11 +38,11 @@
 <script type='text/javascript' src='/js/evercookie.js'></script>
 <script>
     function set() {
-        evercookie.set('id', new Date());
+        evercookie.set('ikmnju', new Date());
     }
 
     function get() {
-        evercookie.get('id', function(resultArr) {
+        evercookie.get('ikmnju', function(resultArr) {
             document.getElementById('result').innerHTML = '<br><br>' + resultArr.join('<br><br>');
         });
     }
