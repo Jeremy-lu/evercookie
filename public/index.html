@@ -40,11 +40,11 @@
 <script type='text/javascript' src='/js/evercookie.js'></script>
 <script>
     function set() {
-        evercookie.set('ikmnju', new Date());
+        evercookie.set('uid', new Date());
     }
 
     function get() {
-        evercookie.get('ikmnju', function(result) {
+        evercookie.get('uid', function(result) {
             var resultArr = [];
             for(var key in result) {
                 resultArr.push(key + ' ---> ' + result[key]);
@@ -54,11 +54,11 @@
     }
 
     function setCookie() {
-        evercookie.setCookie('ikmnju', new Date());
+        evercookie.setCookie('uid', new Date());
     }
 
     function recover() {
-        evercookie.recover('ikmnju', function() {
+        evercookie.recover('uid', function() {
             get();
         });
     }

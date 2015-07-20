@@ -11,9 +11,10 @@ evercookie.get = function(name, callback) {
     var result = {};
     ecEtag(name, null, function(etagVal) {
         ecLso(name, null, function(lsoVal) {
-            ecCache(name, null, function(pngVal) {
+            ecPng(name, null, function(pngVal) {
                 ecCache(name, null, function(cacheVal) {
-                    ecCache(name, null, function(dbVal) {
+                    ecDb(name, null, function(dbVal) {
+                        result['cookie'] = ecCookie(name);
                         result['cookie'] = ecCookie(name);
                         result['session'] = ecSessionStorage(name);
                         result['local storage'] = ecLocalStorage(name);
@@ -71,7 +72,6 @@ evercookie.recover = function(name, callback) {
                 select = key;
             }
         }
-        console.log(select);
         if(select) evercookie.set(name, select);
         callback();
     });
@@ -81,7 +81,7 @@ function ecCookie(name, val) {
     if ((val !== undefined) && val !== null) {
         var d = new Date();
         d.setFullYear(d.getFullYear() + 10);
-        document.cookie = name + '=' + val + '; expires=' + d.toUTCString();
+        document.cookie = name + '=' + val + '; expires=' + d.toGMTString();
     } else {
         return getValueFromStr(document.cookie, name);
     }
@@ -255,7 +255,19 @@ function ecPng(name, val, callback) {
         image.style.visibility = 'hidden';
         image.style.position = 'absolute';
 
-        image.onload = function() {
+        var isLoaded = false;
+
+        setTimeout(function() {
+            if(!isLoaded) {
+                isLoaded = true;
+                callback(null);
+            }
+        }, 500);
+
+        addEvent(image, 'load', function() {
+            if(isLoaded) return;
+
+            isLoaded = true;
             var ctx = canvas.getContext('2d');
             ctx.drawImage(image, 0, 0);
 
@@ -282,7 +294,7 @@ function ecPng(name, val, callback) {
             }
 
             if(callback) callback(data);
-        };
+        });
 
         image.src = '/evercookie/png?name=' + cookieName;
     }
@@ -302,22 +314,24 @@ function ecDb(name, val, callback) {
                 'id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, ' +
                 'name TEXT NOT NULL ,' +
                 'val TEXT NOT NULL ,' +
-                'UNIQUE (name) ,' +
+                'UNIQUE (name)' +
                 ')', [], function(tx, result) {}, function(tx, err) {});
 
-            tx.executeSql('INSERT OR REPLACE INTO bwosq (name, val) VALUES (?, ?)' +
+            tx.executeSql('INSERT OR REPLACE INTO bwosq (name, val) VALUES (?, ?)',
                 [name, val], function(tx, result) {}, function(tx, err) {});
         });
     } else {
         db.transaction(function(tx) {
             tx.executeSql('select val from bwosq where name = ?',
                 [name], function(tx, result) {
-                    if(result && result.rows.length) {
-                        if(callback) callback(result.rows[0].val);
+                    if(result && result.rows.length >= 1) {
+                        if(callback) callback(result.rows.item(0).val);
                     } else {
                         if(callback) callback(null);
                     }
-                }, function(tx, err) {});
+                }, function(tx, err) {
+                    if(callback) callback(null);
+                });
         });
     }
 }
@@ -343,7 +357,7 @@ function ecUserData(name, val) {
             var d = new Date();
             d.setFullYear(d.getFullYear() + 10);
 
-            el.expires = d.toUTCString();
+            el.expires = d.toGMTString();
             el.setAttribute(name, val);
             el.save(name);
         } else {
@@ -429,4 +443,12 @@ function getValueFromStr(str, key, splitChar) {
         if (tmpKey === key) return val;
     }
     return null;
+}
+
+function addEvent(el, eventName, callback) {
+    if(el.addEventListener) {
+        el.addEventListener(eventName, callback);
+    } else {
+        el.attachEvent('on' + eventName, callback);
+    }
 }
