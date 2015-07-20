@@ -27,8 +27,10 @@
 <body>
     <div id="main">
         <div id="operate-panel">
-            <button onclick="get()">get from evercookie</button>
-            <button onclick="set()">set to evercookie</button>
+            <button onclick="get()">get all</button>
+            <button onclick="set()">set all</button>
+            <button onclick="setCookie()">set cookie</button>
+            <button onclick="recover()">recover</button>
         </div>
         <div id='result'></div>
     </div>
@@ -42,8 +44,22 @@
     }
 
     function get() {
-        evercookie.get('ikmnju', function(resultArr) {
+        evercookie.get('ikmnju', function(result) {
+            var resultArr = [];
+            for(var key in result) {
+                resultArr.push(key + ' ---> ' + result[key]);
+            }
             document.getElementById('result').innerHTML = '<br><br>' + resultArr.join('<br><br>');
+        });
+    }
+
+    function setCookie() {
+        evercookie.setCookie('ikmnju', new Date());
+    }
+
+    function recover() {
+        evercookie.recover('ikmnju', function() {
+            get();
         });
     }
 

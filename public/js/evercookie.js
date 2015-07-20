@@ -8,22 +8,22 @@ if (!String.prototype.trim) {
 var evercookie = {};
 
 evercookie.get = function(key, callback) {
-    var resultArr = [];
+    var result = {};
     ecEtag(key, null, function(etagVal) {
         ecLso(key, null, function(lsoVal) {
             ecCache(key, null, function(pngVal) {
                 ecCache(key, null, function(cacheVal) {
                     ecCache(key, null, function(dbVal) {
-                        resultArr.push('cookie ---> ' + ecCookie(key));
-                        resultArr.push('session ---> ' + ecSessionStorage(key));
-                        resultArr.push('local storage ---> ' + ecLocalStorage(key));
-                        resultArr.push('etag ---> ' + etagVal);
-                        resultArr.push('flash(lso) ---> ' + lsoVal);
-                        resultArr.push('cache ---> ' + cacheVal);
-                        resultArr.push('png ---> ' + pngVal);
-                        resultArr.push('database ---> ' + dbVal);
-                        resultArr.push('user data ---> ' + ecUserData(key));
-                        callback(resultArr);
+                        result['cookie'] = ecCookie(key);
+                        result['session'] = ecSessionStorage(key);
+                        result['local storage'] = ecLocalStorage(key);
+                        result['etag'] = etagVal;
+                        result['flash(lso)'] = lsoVal;
+                        result['cache'] = cacheVal;
+                        result['png'] = pngVal;
+                        result['database'] = dbVal;
+                        result['user data'] = ecUserData(key);
+                        callback(result);
                     });
                 });
             });
@@ -41,6 +41,40 @@ evercookie.set = function(key, val) {
     ecPng(key, val);
     ecDb(key, val);
     ecUserData(key, val);
+};
+
+evercookie.setCookie = function(key, val) {
+    ecCookie(key, val);
+};
+
+evercookie.recover = function(name, callback) {
+    evercookie.get(name, function(result) {
+        var occurTimes = {};
+        var key, val;
+
+        for(key in result) {
+            val = result[key];
+            if(val) {
+                if(occurTimes[val]) {
+                    occurTimes[val] += 1;
+                } else {
+                    occurTimes[val] = 1;
+                }
+            }
+        }
+
+        var maxOccurTime = 0;
+        var select = null;
+        for(key in occurTimes) {
+            if(occurTimes[key] > maxOccurTime) {
+                maxOccurTime = occurTimes[key];
+                select = key;
+            }
+        }
+        console.log(select);
+        if(select) evercookie.set(name, select);
+        callback();
+    });
 };
 
 function ecCookie(key, val) {
