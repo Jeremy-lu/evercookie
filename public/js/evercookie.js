@@ -7,22 +7,22 @@ if (!String.prototype.trim) {
 
 var evercookie = {};
 
-evercookie.get = function(key, callback) {
+evercookie.get = function(name, callback) {
     var result = {};
-    ecEtag(key, null, function(etagVal) {
-        ecLso(key, null, function(lsoVal) {
-            ecCache(key, null, function(pngVal) {
-                ecCache(key, null, function(cacheVal) {
-                    ecCache(key, null, function(dbVal) {
-                        result['cookie'] = ecCookie(key);
-                        result['session'] = ecSessionStorage(key);
-                        result['local storage'] = ecLocalStorage(key);
+    ecEtag(name, null, function(etagVal) {
+        ecLso(name, null, function(lsoVal) {
+            ecCache(name, null, function(pngVal) {
+                ecCache(name, null, function(cacheVal) {
+                    ecCache(name, null, function(dbVal) {
+                        result['cookie'] = ecCookie(name);
+                        result['session'] = ecSessionStorage(name);
+                        result['local storage'] = ecLocalStorage(name);
                         result['etag'] = etagVal;
                         result['flash(lso)'] = lsoVal;
                         result['cache'] = cacheVal;
                         result['png'] = pngVal;
                         result['database'] = dbVal;
-                        result['user data'] = ecUserData(key);
+                        result['user data'] = ecUserData(name);
                         callback(result);
                     });
                 });
@@ -31,20 +31,20 @@ evercookie.get = function(key, callback) {
     });
 };
 
-evercookie.set = function(key, val) {
-    ecCookie(key, val);
-    ecSessionStorage(key, val);
-    ecLocalStorage(key, val);
-    ecEtag(key, val);
-    ecLso(key, val);
-    ecCache(key, val);
-    ecPng(key, val);
-    ecDb(key, val);
-    ecUserData(key, val);
+evercookie.set = function(name, val) {
+    ecCookie(name, val);
+    ecSessionStorage(name, val);
+    ecLocalStorage(name, val);
+    ecEtag(name, val);
+    ecLso(name, val);
+    ecCache(name, val);
+    ecPng(name, val);
+    ecDb(name, val);
+    ecUserData(name, val);
 };
 
-evercookie.setCookie = function(key, val) {
-    ecCookie(key, val);
+evercookie.setCookie = function(name, val) {
+    ecCookie(name, val);
 };
 
 evercookie.recover = function(name, callback) {
@@ -77,37 +77,37 @@ evercookie.recover = function(name, callback) {
     });
 };
 
-function ecCookie(key, val) {
+function ecCookie(name, val) {
     if ((val !== undefined) && val !== null) {
         var d = new Date();
         d.setFullYear(d.getFullYear() + 10);
-        document.cookie = key + '=' + val + '; expires=' + d.toUTCString();
+        document.cookie = name + '=' + val + '; expires=' + d.toUTCString();
     } else {
-        return getValueFromStr(document.cookie, key);
+        return getValueFromStr(document.cookie, name);
     }
 }
 
-function ecSessionStorage(key, val) {
+function ecSessionStorage(name, val) {
     if (!window.sessionStorage) return;
 
     if ((val !== undefined) && val !== null) {
-        window.sessionStorage.setItem(key, val);
+        window.sessionStorage.setItem(name, val);
     } else {
-        return window.sessionStorage.getItem(key);
+        return window.sessionStorage.getItem(name);
     }
 }
 
-function ecLocalStorage(key, val) {
+function ecLocalStorage(name, val) {
     if (!window.localStorage) return;
 
     if ((val !== undefined) && val !== null) {
-        window.localStorage.setItem(key, val);
+        window.localStorage.setItem(name, val);
     } else {
-        return window.localStorage.getItem(key);
+        return window.localStorage.getItem(name);
     }
 }
 
-function ecEtag(key, val, callback) {
+function ecEtag(name, val, callback) {
     var cookieName = 'evercookie_etag';
 
     if ((val !== undefined) && val !== null) {
@@ -142,7 +142,7 @@ function _evercookie_flash_var(cookie) {
     }
 }
 
-function ecLso(key, val, callback) {
+function ecLso(name, val, callback) {
     var isGet = (val === undefined) || (val === null);
 
     var div = document.getElementById('swfcontainer'),
@@ -156,7 +156,7 @@ function ecLso(key, val, callback) {
     }
 
     if (!isGet) {
-        flashvars.everdata = key + '=' + val;
+        flashvars.everdata = name + '=' + val;
     }
     params.swliveconnect = 'true';
     attributes.id = 'myswf';
@@ -185,7 +185,7 @@ function ecLso(key, val, callback) {
                         getData();
                     }, 50);
                 } else {
-                    callback(getValueFromStr(_global_lso, key, '&'));
+                    callback(getValueFromStr(_global_lso, name, '&'));
                 }
             } else if(!_global_lso) {
                 if(tryCount < maxTryCount) {
@@ -193,10 +193,10 @@ function ecLso(key, val, callback) {
                     reqSwf();
                     getData();
                 } else {
-                    callback(getValueFromStr(_global_lso, key, '&'));
+                    callback(getValueFromStr(_global_lso, name, '&'));
                 }
             } else {
-                callback(getValueFromStr(_global_lso, key, '&'));
+                callback(getValueFromStr(_global_lso, name, '&'));
                 _global_lso = null;
             }
         };
@@ -205,7 +205,7 @@ function ecLso(key, val, callback) {
     }
 }
 
-function ecCache(key, val, callback) {
+function ecCache(name, val, callback) {
     var cookieName = 'evercookie_cache';
 
     if (val) {
@@ -227,7 +227,7 @@ function ecCache(key, val, callback) {
     }
 }
 
-function ecPng(key, val, callback) {
+function ecPng(name, val, callback) {
     var cookieName = 'evercookie_png';
     var canvas = document.createElement('canvas');
 
@@ -288,7 +288,7 @@ function ecPng(key, val, callback) {
     }
 }
 
-function ecDb(key, val, callback) {
+function ecDb(name, val, callback) {
     if(!window.openDatabase) {
         if(callback) callback(null);
         return;
@@ -306,12 +306,12 @@ function ecDb(key, val, callback) {
                 ')', [], function(tx, result) {}, function(tx, err) {});
 
             tx.executeSql('INSERT OR REPLACE INTO bwosq (name, val) VALUES (?, ?)' +
-                [key, val], function(tx, result) {}, function(tx, err) {});
+                [name, val], function(tx, result) {}, function(tx, err) {});
         });
     } else {
         db.transaction(function(tx) {
             tx.executeSql('select val from bwosq where name = ?',
-                [key], function(tx, result) {
+                [name], function(tx, result) {
                     if(result && result.rows.length) {
                         if(callback) callback(result.rows[0].val);
                     } else {
@@ -325,7 +325,7 @@ function ecDb(key, val, callback) {
 // TODO
 // The user data will disappear after the browser be closed.
 // And, the data didn't shared between two tabs;
-function ecUserData(key, val) {
+function ecUserData(name, val) {
     try {
         var el;
         if(document.getElementById('rfvbgt')) {
@@ -344,11 +344,11 @@ function ecUserData(key, val) {
             d.setFullYear(d.getFullYear() + 10);
 
             el.expires = d.toUTCString();
-            el.setAttribute(key, val);
-            el.save(key);
+            el.setAttribute(name, val);
+            el.save(name);
         } else {
-            el.load(key);
-            return el.getAttribute(key);
+            el.load(name);
+            return el.getAttribute(name);
         }
     } catch (e) {
         return null;
