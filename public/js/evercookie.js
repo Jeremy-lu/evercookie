@@ -6,30 +6,69 @@ if (!String.prototype.trim) {
 }
 
 var evercookie = {};
+var dmp = {
+    errors: []
+};
+
+var protocol = location.protocol === 'https:' ? 'https:' : 'http:';
 
 evercookie.get = function(name, callback) {
     var result = {};
-    ecEtag(name, null, function(etagVal) {
-        ecLso(name, null, function(lsoVal) {
-            ecPng(name, null, function(pngVal) {
-                ecCache(name, null, function(cacheVal) {
-                    ecDb(name, null, function(dbVal) {
-                        result['cookie'] = ecCookie(name);
-                        result['cookie'] = ecCookie(name);
-                        result['session'] = ecSessionStorage(name);
-                        result['local storage'] = ecLocalStorage(name);
-                        result['etag'] = etagVal;
-                        result['flash(lso)'] = lsoVal;
-                        result['cache'] = cacheVal;
-                        result['png'] = pngVal;
-                        result['database'] = dbVal;
-                        result['user data'] = ecUserData(name);
-                        callback(result);
-                    });
-                });
-            });
-        });
+    var etagFinish = false;
+    var lsoFinish = false;
+    var cacheFinish = false;
+    var dbFinish = false;
+    var pngFinish = false;
+
+    ecEtag(name, null, function(val) {
+        result.etag = val;
+        etagFinish = true;
     });
+    ecLso(name, null, function(val) {
+        result.lso = val;
+        lsoFinish = true;
+    });
+    ecCache(name, null, function(val) {
+        result.cache = val;
+        cacheFinish = true;
+    });
+    ecDb(name, null, function(val) {
+        result.db = val;
+        dbFinish = true;
+    });
+    ecPng(name, null, function(val) {
+        result.png = val;
+        pngFinish = true;
+    });
+
+    result.cookie = ecCookie(name);
+    result.session = ecSessionStorage(name);
+    result.local = ecLocalStorage(name);
+    result.userdata = ecUserData(name);
+
+    var tryCount = 10;
+    var waitTime = 100;
+    var isFinished = false;
+
+    var tryBack = function() {
+        if(isFinished) return;
+
+        if(etagFinish && lsoFinish && cacheFinish && dbFinish && pngFinish) {
+            isFinished = true;
+            callback(result);
+        } else {
+            tryCount = tryCount - 1;
+            if(tryCount > 0) {
+                setTimeout(function() {
+                    tryBack();
+                }, waitTime);
+            } else {
+                callback(result);
+            }
+        }
+    };
+
+    tryBack();
 };
 
 evercookie.set = function(name, val) {
@@ -39,9 +78,9 @@ evercookie.set = function(name, val) {
     ecEtag(name, val);
     ecLso(name, val);
     ecCache(name, val);
-    ecPng(name, val);
     ecDb(name, val);
     ecUserData(name, val);
+    ecPng(name, val);
 };
 
 evercookie.setCookie = function(name, val) {
@@ -73,24 +112,22 @@ evercookie.recover = function(name, callback) {
             }
         }
         if(select) evercookie.set(name, select);
-        callback();
+        if(callback) callback();
     });
 };
 
 function ecCookie(name, val) {
-    if ((val !== undefined) && val !== null) {
-        var d = new Date();
-        d.setFullYear(d.getFullYear() + 10);
-        document.cookie = name + '=' + val + '; expires=' + d.toGMTString();
+    if (val) {
+        setCookieValue(name, val, 10 * 365);
     } else {
         return getValueFromStr(document.cookie, name);
     }
 }
 
 function ecSessionStorage(name, val) {
-    if (!window.sessionStorage) return;
+    if (!window.sessionStorage) return null;
 
-    if ((val !== undefined) && val !== null) {
+    if (val) {
         window.sessionStorage.setItem(name, val);
     } else {
         return window.sessionStorage.getItem(name);
@@ -98,9 +135,14 @@ function ecSessionStorage(name, val) {
 }
 
 function ecLocalStorage(name, val) {
-    if (!window.localStorage) return;
+    if (!window.localStorage) {
+        dmp.errors.push({
+            name: 'not support window.localStorage'
+        });
+        return null;
+    }
 
-    if ((val !== undefined) && val !== null) {
+    if (val) {
         window.localStorage.setItem(name, val);
     } else {
         return window.localStorage.getItem(name);
@@ -108,32 +150,31 @@ function ecLocalStorage(name, val) {
 }
 
 function ecEtag(name, val, callback) {
-    var cookieName = 'evercookie_etag';
+    var cookieName = 'ec_etag';
 
-    if ((val !== undefined) && val !== null) {
-        document.cookie = cookieName + '=' + val + '; path=/';
+    if (val) {
+        setCookieValue(cookieName, val, 10 * 365);
         ajax({
             url: '/evercookie/etag?name=' + cookieName,
             nocache: true,
             success: function() {}
         });
     } else {
-        document.cookie = cookieName + '=';
+        setCookieValue(cookieName, '', -3);
         ajax({
             url: '/evercookie/etag?name=' + cookieName,
             success: function(data) {
+                if(!data) data = null;
                 if (callback) callback(data);
             }
         });
     }
 }
 
-var _global_lso;
-var reqCount = 0;
+var _global_lso = null;
 // Comunicate with local shared object(lso)
 function _evercookie_flash_var(cookie) {
-    reqCount = reqCount - 1;
-    _global_lso = cookie;
+    if(cookie && cookie !== 'undefined') _global_lso = cookie;
 
     // remove the flash object now
     var swf = document.getElementById('myswf');
@@ -143,61 +184,45 @@ function _evercookie_flash_var(cookie) {
 }
 
 function ecLso(name, val, callback) {
-    var isGet = (val === undefined) || (val === null);
-
     var div = document.getElementById('swfcontainer'),
         flashvars = {},
         params = {},
         attributes = {};
-    if (div === null || div === undefined || !div.length) {
+    if (!div) {
         div = document.createElement('div');
         div.setAttribute('id', 'swfcontainer');
         document.body.appendChild(div);
     }
 
-    if (!isGet) {
+    if (val) {
         flashvars.everdata = name + '=' + val;
     }
     params.swliveconnect = 'true';
     attributes.id = 'myswf';
     attributes.name = 'myswf';
 
-    function reqSwf() {
-        reqCount = reqCount + 1;
-        window.swfobject.embedSWF('/assets/evercookie.swf', 'swfcontainer', '1', '1', '9.0.0', false, flashvars, params, attributes);
-    }
+    window.swfobject.embedSWF(protocol + '//www.evercookie.com/assets/evercookie.swf', 'swfcontainer', '1', '1', '9.0.0', false, flashvars, params, attributes);
 
-    reqSwf();
-
-    // window.swfobject.embedSWF('http://samy.pl/evercookie/evercookie.swf', 'swfcontainer', '1', '1', '9.0.0', false, flashvars, params, attributes);
-
-    if (isGet) {
-        var tryCount = 0;
-        var maxTryCount = 3;
-        var waitTime = 0;
-        var maxWaitTime = 1000;
+    if (!val) {
+        var tryCount = 10;
+        var waitTime = 100;
+        var isFinished = false;
 
         var getData = function() {
-            if(reqCount > 0) {
-                waitTime += 50;
-                if(waitTime < maxWaitTime) {
+            if(isFinished) return;
+
+            if(_global_lso) {
+                isFinished = true;
+                if(callback) callback(getValueFromStr(_global_lso, name, '&'));
+            } else {
+                tryCount = tryCount - 1;
+                if(tryCount > 0) {
                     setTimeout(function() {
                         getData();
-                    }, 50);
+                    }, waitTime);
                 } else {
-                    callback(getValueFromStr(_global_lso, name, '&'));
+                    if(callback) callback(null);
                 }
-            } else if(!_global_lso) {
-                if(tryCount < maxTryCount) {
-                    tryCount = tryCount + 1;
-                    reqSwf();
-                    getData();
-                } else {
-                    callback(getValueFromStr(_global_lso, name, '&'));
-                }
-            } else {
-                callback(getValueFromStr(_global_lso, name, '&'));
-                _global_lso = null;
             }
         };
 
@@ -206,17 +231,19 @@ function ecLso(name, val, callback) {
 }
 
 function ecCache(name, val, callback) {
-    var cookieName = 'evercookie_cache';
+    var cookieName = 'ec_cache';
 
     if (val) {
-        document.cookie = cookieName + '=' + val + '; path=/';
+        setCookieValue(cookieName, val, 10 * 365);
         ajax({
             url: '/evercookie/cache?name=' + cookieName,
             nocache: true,
-            success: function() {}
+            success: function() {
+                if(callback) callback();
+            }
         });
     } else {
-        document.cookie = cookieName + '=';
+        setCookieValue(cookieName, '', -3);
         ajax({
             url: '/evercookie/cache?name=' + cookieName,
             // nocache: true,
@@ -227,17 +254,115 @@ function ecCache(name, val, callback) {
     }
 }
 
+function ecDb(name, val, callback) {
+    if(!window.openDatabase) {
+        if(callback) callback(null);
+        dmp.errors.push({
+            name: 'not support window.openDatabase'
+        });
+        return;
+    }
+
+    var db = window.openDatabase('db_evercookie', '', 'evercookie', 1024*1024);
+
+    if(val) {
+        db.transaction(function(tx) {
+            tx.executeSql('CREATE TABLE IF NOT EXISTS ec_info (' +
+                'id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, ' +
+                'name TEXT NOT NULL ,' +
+                'val TEXT NOT NULL ,' +
+                'UNIQUE (name)' +
+                ')', [], function(tx) {
+                    tx.executeSql('INSERT OR REPLACE INTO ec_info (name, val) VALUES (?, ?)',
+                        [name, val], function() {
+                            if(callback) callback();
+                        }, function(tx, err) {
+                            dmp.errors.push({
+                                name: 'opendatabase insert or update error',
+                                error: err
+                            });
+                            if(callback) callback();
+                        });
+            }, function(tx, err) {
+                dmp.errors.push({
+                    name: 'opendatabase create table error',
+                    error: err
+                });
+                if(callback) callback();
+            });
+        });
+    } else {
+        db.transaction(function(tx) {
+            tx.executeSql('select val from ec_info where name = ?',
+                [name], function(tx, result) {
+                    if(result && result.rows.length >= 1) {
+                        if(callback) callback(result.rows.item(0).val);
+                    } else {
+                        if(callback) callback(null);
+                    }
+                }, function(tx, err) {
+                    if(callback) callback(null);
+                    dmp.errors.push({
+                        name: 'opendatabase select table error',
+                        error: err
+                    });
+                });
+        });
+    }
+}
+
+// TODO
+// The user data will disappear after the browser be closed.
+// And, the data didn't shared between two tabs;
+function ecUserData(name, val) {
+    try {
+        var el = document.getElementById('ec-userdata');
+        if(!el) {
+            el = document.createElement('div');
+            el.id = 'ec-userdata';
+            el.style.display = 'hidden';
+            el.style.position = 'absolute';
+            document.body.appendChild(el);
+        }
+        el.style.behavior = 'url("#default#userData")';
+
+        if(val) {
+            var d = new Date();
+            d.setFullYear(d.getFullYear() + 10);
+
+            el.expires = d.toUTCString();
+            el.setAttribute(name, val);
+            // The method 'save' and 'load' not a function
+            // Boolean(el.save) === false
+            // typeof el.save === 'unknown'
+            el.save(name);
+        } else {
+            el.load(name);
+            return el.getAttribute(name) || null;
+        }
+    } catch (e) {
+        dmp.errors.push({
+            name: 'userdata error',
+            error: e
+        });
+        return null;
+    }
+}
+
 function ecPng(name, val, callback) {
     var cookieName = 'evercookie_png';
     var canvas = document.createElement('canvas');
 
     if(!canvas || !canvas.getContext) {
+        dmp.errors.push({
+            name: 'not support canvas'
+        });
         if(callback) callback(null);
         return;
     }
 
     if (val) {
-        document.cookie = cookieName + '=' + val + '; path=/';
+        setCookieValue(cookieName, val, 10);
         ajax({
             url: '/evercookie/png?name=' + cookieName,
             nocache: true,
@@ -249,7 +374,7 @@ function ecPng(name, val, callback) {
         canvas.width = 200;
         canvas.height = 1;
 
-        document.cookie = cookieName + '=';
+        setCookieValue(cookieName, '', -3);
 
         var image = document.createElement('img');
         image.style.visibility = 'hidden';
@@ -259,13 +384,21 @@ function ecPng(name, val, callback) {
 
         setTimeout(function() {
             if(!isLoaded) {
+                dmp.errors.push({
+                    name: 'png did not load'
+                });
                 isLoaded = true;
                 callback(null);
             }
         }, 500);
 
         addEvent(image, 'load', function() {
-            if(isLoaded) return;
+            if(isLoaded) {
+                dmp.errors.push({
+                    name: 'png loaded after callback(load too slow)'
+                });
+                return;
+            }
 
             isLoaded = true;
             var ctx = canvas.getContext('2d');
@@ -275,6 +408,9 @@ function ecPng(name, val, callback) {
             var tmp = ctx.getImageData(0, 0, 200, 1);
 
             if(!tmp) {
+                dmp.errors.push({
+                    name: 'can not get image data'
+                });
                 if(callback) callback(null);
                 return;
             }
@@ -300,75 +436,6 @@ function ecPng(name, val, callback) {
     }
 }
 
-function ecDb(name, val, callback) {
-    if(!window.openDatabase) {
-        if(callback) callback(null);
-        return;
-    }
-
-    var db = window.openDatabase('db_bwoslq', '', 'bwoslq', 1024*1024);
-
-    if((val !== undefined) && (val !== null)) {
-        db.transaction(function(tx) {
-            tx.executeSql('CREATE TABLE IF NOT EXISTS bwosq (' +
-                'id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, ' +
-                'name TEXT NOT NULL ,' +
-                'val TEXT NOT NULL ,' +
-                'UNIQUE (name)' +
-                ')', [], function(tx, result) {}, function(tx, err) {});
-
-            tx.executeSql('INSERT OR REPLACE INTO bwosq (name, val) VALUES (?, ?)',
-                [name, val], function(tx, result) {}, function(tx, err) {});
-        });
-    } else {
-        db.transaction(function(tx) {
-            tx.executeSql('select val from bwosq where name = ?',
-                [name], function(tx, result) {
-                    if(result && result.rows.length >= 1) {
-                        if(callback) callback(result.rows.item(0).val);
-                    } else {
-                        if(callback) callback(null);
-                    }
-                }, function(tx, err) {
-                    if(callback) callback(null);
-                });
-        });
-    }
-}
-
-// TODO
-// The user data will disappear after the browser be closed.
-// And, the data didn't shared between two tabs;
-function ecUserData(name, val) {
-    try {
-        var el;
-        if(document.getElementById('rfvbgt')) {
-            el = document.getElementById('rfvbgt');
-        } else {
-            el = document.createElement('div');
-            el.id = 'rfvbgt';
-            el.style.display = 'hidden';
-            el.style.position = 'absolute';
-            document.body.appendChild(el);
-        }
-        el.style.behavior = 'url("#default#userData")';
-
-        if((val !== undefined) && (val !== null)) {
-            var d = new Date();
-            d.setFullYear(d.getFullYear() + 10);
-
-            el.expires = d.toGMTString();
-            el.setAttribute(name, val);
-            el.save(name);
-        } else {
-            el.load(name);
-            return el.getAttribute(name);
-        }
-    } catch (e) {
-        return null;
-    }
-}
-
 function ajax(settings) {
     var headers, name, transports, transport, i, length;
 
@@ -378,22 +445,25 @@ function ajax(settings) {
     };
 
     if(settings.nocache) {
-        // Force ignore cache
-        if(isIE()) {
+        if(/*@cc_on!@*/false || !!document.documentMode) {
             headers['If-Modified-Since'] = new Date(0);
         } else {
-            headers['Cache-Control'] = 'no-cache';
+            headers['Pragma'] = 'no-cache';
+            headers['Cache-Control'] = 'no-cache, no-store, max-age=0, must-revalidate';
         }
     }
 
     transports = [
         function() {
+            // For IE7+ and other browsers
             return new XMLHttpRequest();
         },
         function() {
+            // For IE6+ standards model
             return new ActiveXObject('Msxml2.XMLHTTP');
         },
         function() {
+            // For IE5.5
             return new ActiveXObject('Microsoft.XMLHTTP');
         }
     ];
@@ -406,33 +476,30 @@ function ajax(settings) {
         } catch (e) {}
     }
 
+    if(!transport) {
+        if(settings.success) settings.success(null);
+        dmp.errors.push({
+            name: 'not found a transport in AJAX'
+        });
+        return;
+    }
+
     transport.onreadystatechange = function() {
-        if (transport.readyState !== 4) {
-            return;
+        if (transport.readyState === 4) {
+            if(settings.success) settings.success(transport.responseText);
         }
-        settings.success(transport.responseText);
     };
-    transport.open('get', settings.url, true);
+    transport.open('get', protocol + '//www.evercookie.com' + settings.url, true);
     for (name in headers) {
         transport.setRequestHeader(name, headers[name]);
     }
     transport.send();
 }
 
-function isIE() {
-    if (!navigator.userAgent) return false;
-
-    var agent = navigator.userAgent.toLowerCase();
-    //IE
-    if ((agent.indexOf('msie') > 0) || (agent.indexOf('trident') > 0)) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
 function getValueFromStr(str, key, splitChar) {
-    splitChar = splitChar || ';';
+    if(!str) return null;
+
+    splitChar = splitChar || '; ';
     var cookieArray = str.split(splitChar);
     for (var i = 0, il = cookieArray.length; i < il; i++) {
         var cookie = cookieArray[i];
@@ -443,6 +510,12 @@ function getValueFromStr(str, key, splitChar) {
         if (tmpKey === key) return val;
     }
     return null;
+}
+
+function setCookieValue(key, val, expiresDay) {
+    var d = new Date();
+    d.setTime(d.getTime() + (expiresDay * 24 * 60 * 60 * 1000));
+    document.cookie = key + '=' + val + '; domain=.evercookie.com; path=/; expires=' + d.toUTCString();
 }
 
 function addEvent(el, eventName, callback) {

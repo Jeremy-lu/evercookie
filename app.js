@@ -20,10 +20,6 @@ app.use(function(req, res, next) {
             break;
         case '/evercookie/etag':
             cookieVal = req.cookies[req.query.name];
-            // console.log();
-            // console.log('***********  cookie: ', cookieVal);
-            // console.log('****  If-None-Match: ', req.get('If-None-Match'));
-            // console.log();
             if (!cookieVal) cookieVal = req.get('If-None-Match');
 
             if (cookieVal) {
@@ -40,9 +36,9 @@ app.use(function(req, res, next) {
                 date.setFullYear(date.getFullYear() + 10);
 
                 res.set({
-                  'Content-Type': 'text/html',
+                  'Content-Type': 'text/plain',
                   'Expires': date.toUTCString(),
-                  'Cache-Control': 'private, max-age=' + (10 * 365 * 24 * 60 * 60 * 1000)
+                  'Cache-Control': 'public, max-age=' + (10 * 365 * 24 * 60 * 60 * 1000)
                 });
                 res.send(cookieVal);
             } else {
@@ -67,7 +63,7 @@ app.use(function(req, res, next) {
                 res.set({
                   'Content-Type': 'image/png',
                   'Expires': date.toUTCString(),
-                  'Cache-Control': 'private, max-age=' + (10 * 365 * 24 * 60 * 60 * 1000)
+                  'Cache-Control': 'public, max-age=' + (10 * 365 * 24 * 60 * 60 * 1000)
                 });
 
                 res.send(png);
